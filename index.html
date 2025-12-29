@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>昼夜マップ（完全版）</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #000; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+// シーンとカメラ
+const scene = new THREE.Scene();
+const camera = new THREE.OrthographicCamera(-2, 2, 1, -1, 0.1, 10);
+camera.position.z = 1;
+
+// レンダラー
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// OrbitControls
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableRotate = false;
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
+
+// ローカル画像やCORSフリー画像を使用
+// 例: earth_bw.png（大陸白、海黒）
+// 画像のアスペクト比に合わせてPlaneの幅と高さを調整
+const imageWidth = 2048;
+const imageHeight = 1024;
+const aspect = imageWidth / imageHeight;
+const geometry = new THREE.PlaneGeometry(2*aspect, 2);
+
+// テクスチャロード
+const loader = new THREE.TextureLoader();
+loader.load(
+  "earth_bw.png", // ここにSVGやPNGのファイル名
+  (texture) => {
+    // シェーダーマテリアル
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uTexture: { value: texture },
+        uTime: { value: 0 }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D uTexture;
+        uniform float uTime;
+        varying vec2 vUv;
+
+        void main() {
+          vec4 color = texture2D(uTexture, vUv);
+          float isLand = (color.r + color.g + color.b)/3.0 > 0.5 ? 1.0 : 0.0;
+
+          // 経度
+          float lon = vUv.x * 2.0 * 3.141592 - 3.141592;
+
+          // 太陽経度（1日で一周）
+          float sunLon = mod(uTime * 0.00007292115, 2.0*3.141592) - 3.141592;
+
+          // 昼夜判定
+          bool isDay = cos(lon - sunLon) > 0.0;
+
+          float finalColor = 0.0;
+          if(isDay){
+            finalColor = isLand > 0.5 ? 1.0 : 0.0; // 昼: 大陸白・海黒
+          } else {
+            finalColor = isLand > 0.5 ? 0.0 : 1.0; // 夜: 大陸黒・海白
+          }
+
+          gl_FragColor = vec4(vec3(finalColor),1.0);
+        }
+      `
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    // アニメーション
+    function animate() {
+      requestAnimationFrame(animate);
+      material.uniforms.uTime.value = Date.now();
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  },
+  undefined,
+  (err) => { console.error("テクスチャ読み込み失敗", err); }
+);
+
+// リサイズ対応
+window.addEventListener("resize", () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+
+</body>
+</html>
