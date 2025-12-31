@@ -861,3 +861,94 @@ function updateYoutubeControls() {
 }
 
 window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+setInterval(updateYoutubeControls, 1000);
+switchTimer('pomodoro');
+loadSettings();
+
+function switchTimer(type) {
+  timerType = type;
+  isWork = type === 'pomodoro';
+  timeLeft = initialTime = type === 'pomodoro' ? pomoT * 60 : type === 'short' ? shortT * 60 : longT * 60;
+  updateTimer();
+}
+
+function updateTimer() {
+  const min = Math.floor(timeLeft / 60);
+  const sec = timeLeft % 60;
+  $('timer').textContent = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  $('float-timer-time').textContent = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  const progress = ((initialTime - timeLeft) / initialTime) * 100;
+  $('timer-progress').style.width = progress + '%';
+}
+
+function toggleTimer() {
+  play('snd-click');
+  if (timerRun) {
+    clearInterval(timerInt);
+    timerRun = false;
+    $('start').textContent = 'Start';
+    updateQuickPlayIcon(false);
+  } else {
+    timerRun = true;
+    $('start').textContent = 'Pause';
+    updateQuickPlayIcon(true);
+    timerInt = setInterval(() => {
+      if (--timeLeft <= 0) {
+        timerRun = false;
+        clearInterval(timerInt);
+        updateQuickPlayIcon(false);
+        if (isWork) {
+          play('snd-timer');
+          showAlert('作業終了！', '休憩時間です');
+          cycles++;
+          if (sets.longBreak > 0 && cycles % sets.longBreak === 0) {
+            setTimeout(() => { switchTimer('long'); toggleTimer(); }, 3000);
+          } else {
+            setTimeout(() => { switchTimer('short'); toggleTimer(); }, 3000);
+          }
+        } else {
+          play('snd-timer');
+          showAlert('休憩終了！', '作業時間です');
+          setTimeout(() => { switchTimer('pomodoro'); toggleTimer(); }, 3000);
+        }
+      }
+      updateTimer();
+    }, 1000);
+  }
+}
+
+function resetTimer() {
+  play('snd-click');
+  if (timerRun) {
+    clearInterval(timerInt);
+    timerRun = false;
+    $('start').textContent = 'Start';
+    updateQuickPlayIcon(false);
+  }
+  timeLeft = initialTime;
+  updateTimer();
+  play('snd-click');
+  if (timerRun) {
+    clearInterval(timerInt);
+    timerRun = false;
+    $('start').textContent = 'Start';
+    updateQuickPlayIcon(false);
+  }
+  timeLeft = initialTime;
+  updateTimer();
+}
+
+function checkVis() {
+  const shouldShow = localStorage.getItem('float-timer') === 'true';
+  if (!shouldShow) return;
+  
+  const content = document.querySelector('.content');
+  const timerRect = $('timer-section').getBoundingClientRect();
+  const contentRect = content.getBoundingClientRect();
+  
+  const isVisible = timerRect.top < contentRect.bottom && timerRect.bottom > contentRect.top;
+  
+  $('float-timer').classList.toggle('visible', !isVisible);
+}
+checkVis();
+setInterval(checkVis, 1000);
