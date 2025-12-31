@@ -244,4 +244,56 @@
         <a class="nav-item" onclick="switchSection('gemini')">
           <div class="nav-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-44V5
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </div>
+          <span class="nav-label">Gemini</span>
+        </a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Settings</div>
+        <a class="nav-item" onclick="showSettings()">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 4.6 12H4a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1-1.51A1.65 1.65 0 0 0 4.76 4.67l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H10a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65, etc."/>
+            </svg>
+          </div>
+          <span class="nav-label">Pomodoro Settings</span>
+        </a>
+        <a class="nav-item" onclick="showAppSettings()">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 4.6 12H4a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1-1.51A1.65 1.65 0 0 0 4.76 4.67l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H10a1.65, etc."/>
+            </svg>
+          </div>
+          <span class="nav-label">App Settings</span>
+        </a>
+      </div>
+    </nav>
+  </aside>
+  <div class="stats-modal" id="stats-modal">
+    
+    <div class="stats-content">
+      <h2>Pomodoro Stats</h2>
+      <div class="stats-cards">
+        <div class="stats-card">
+          <div class="stats-card-value" id="stat-total">0</div>
+          <div class="stats-card-label">Total Sessions</div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-value" id="stat-focus-time">0m</div>
+          <div class="stats-card-label">Focus Time</div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-value" id="stat-break-time">0m</div>
+          <div class="stats-card-label">Break Time</div>
+        </div>
+      </div>
+      <button class="close-stats-btn" onclick="closeStats()">Close</button>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
