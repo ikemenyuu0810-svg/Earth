@@ -1,112 +1,247 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>昼夜マップ（完全版）</title>
-<style>
-  body { margin: 0; overflow: hidden; background: #000; }
-  canvas { display: block; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Work Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="./icon-ver.black.svg">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div id="bg-container">
+    <img class="bg-img active" src="background-image/bgimg-1.jpg" alt="">
+    <img class="bg-img" src="" alt="">
+  </div>
+  <div id="bg-overlay"></div>
 
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+  <div class="alert" id="alert">
+    <div class="alert-wrap">
+      <div class="alert-title" id="alert-title">Time Up!</div>
+      <div class="alert-msg" id="alert-msg">Finished your task</div>
+      <button class="alert-close" onclick="hideAlert()">OK</button>
+    </div>
+  </div>
 
-<script>
-// シーンとカメラ
-const scene = new THREE.Scene();
-const camera = new THREE.OrthographicCamera(-2, 2, 1, -1, 0.1, 10);
-camera.position.z = 1;
+  <div class="modal" id="settings">
+    <div class="modal-content">
+      <div class="modal-title">Pomodoro Settings</div>
+      <div class="setting-item">
+        <label class="setting-label">Work Time (min)</label>
+        <input type="number" class="setting-input" id="set-work" min="1" max="60" value="25">
+      </div>
+      <div class="setting-item">
+        <label class="setting-label">Break Time (min)</label>
+        <input type="number" class="setting-input" id="set-break" min="1" max="30" value="5">
+      </div>
+      <div class="setting-item">
+        <label class="setting-label">Repeat (0 = ∞)</label>
+        <input type="number" class="setting-input" id="set-repeat" min="0" max="20" value="0">
+      </div>
+      <div class="modal-btns">
+        <button class="modal-btn secondary" onclick="hideSettings()">Cancel</button>
+        <button class="modal-btn primary" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
 
-// レンダラー
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+  <div class="modal" id="app-settings">
+    <div class="modal-content">
+      <div class="modal-title">App Settings</div>
+      <div class="setting-item">
+        <label class="setting-label">Text Color</label>
+        <input type="color" class="setting-input" id="text-color" value="#ffffff">
+      </div>
+      <div class="modal-btns">
+        <button class="modal-btn secondary" onclick="hideAppSettings()">Close</button>
+      </div>
+    </div>
+  </div>
 
-// OrbitControls
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableRotate = false;
-controls.enableDamping = true;
-controls.dampingFactor = 0.1;
+  <div class="stats-modal" id="stats-modal">
+    <div class="stats-content">
+      <div class="stats-title">Work Statistics</div>
+      <div class="stats-grid">
+        <div class="stats-card">
+          <div class="stats-card-value" id="stat-sessions">0</div>
+          <div class="stats-card-label">Total Sessions</div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-value" id="stat-minutes">0</div>
+          <div class="stats-card-label">Total Minutes</div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-value" id="stat-today">0</div>
+          <div class="stats-card-label">Today's Sessions</div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-value" id="stat-streak">0</div>
+          <div class="stats-card-label">Day Streak</div>
+        </div>
+      </div>
+      <button class="stats-close" onclick="hideStats()">Close</button>
+    </div>
+  </div>
 
-// ローカル画像やCORSフリー画像を使用
-// 例: earth_bw.png（大陸白、海黒）
-// 画像のアスペクト比に合わせてPlaneの幅と高さを調整
-const imageWidth = 2048;
-const imageHeight = 1024;
-const aspect = imageWidth / imageHeight;
-const geometry = new THREE.PlaneGeometry(2*aspect, 2);
+  <div class="float float-timer" id="float-timer" onclick="switchSection('timer')">
+    <div class="float-time" id="float-timer-time">25:00</div>
+  </div>
 
-// テクスチャロード
-const loader = new THREE.TextureLoader();
-loader.load(
-  "ikemenyuu0810-svg/Earth/earth.svg", // ここにSVGやPNGのファイル名
-  (texture) => {
-    // シェーダーマテリアル
-    const material = new THREE.ShaderMaterial({
-      uniforms: {
-        uTexture: { value: texture },
-        uTime: { value: 0 }
-      },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform sampler2D uTexture;
-        uniform float uTime;
-        varying vec2 vUv;
+  <div class="float float-clock" id="float-clock" onclick="switchSection('clock')">
+    <div class="float-time" id="float-clock-time">00:00:00</div>
+  </div>
 
-        void main() {
-          vec4 color = texture2D(uTexture, vUv);
-          float isLand = (color.r + color.g + color.b)/3.0 > 0.5 ? 1.0 : 0.0;
+  <div class="youtube-fixed-controls" id="youtube-fixed-controls">
+    <button class="youtube-btn" onclick="toggleYoutubePlay()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <polygon id="yt-play-icon" points="5 3 19 12 5 21 5 3"/>
+        <rect id="yt-pause-icon" x="6" y="4" width="4" height="16" style="display:none;"/>
+        <rect id="yt-pause-icon2" x="14" y="4" width="4" height="16" style="display:none;"/>
+      </svg>
+    </button>
+    <input type="range" class="youtube-volume" id="youtube-volume-fixed" min="0" max="100" value="70" oninput="setYoutubeVolume(this.value)">
+  </div>
 
-          // 経度
-          float lon = vUv.x * 2.0 * 3.141592 - 3.141592;
+  <div class="mobile-overlay" id="mobile-overlay" onclick="toggleSidebar()"></div>
 
-          // 太陽経度（1日で一周）
-          float sunLon = mod(uTime * 0.00007292115, 2.0*3.141592) - 3.141592;
+  <div class="site-links">
+    <a class="site-link" href="https://github.com" target="_blank">
+      <svg viewBox="0 0 24 24" fill="white"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+    </a>
+    <a class="site-link" href="https://chat.openai.com" target="_blank">
+      <svg viewBox="0 0 24 24" fill="white"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>
+    </a>
+    <a class="site-link" href="https://claude.ai" target="_blank">
+      <svg viewBox="0 0 24 24" fill="white"><path d="M12 0L24 6v12L12 24 0 18V6L12 0zm0 2.5L2 7.5v9l10 5.5 10-5.5v-9L12 2.5z"/></svg>
+    </a>
+    <a class="site-link" href="https://vscode.dev" target="_blank">
+      <svg viewBox="0 0 24 24" fill="white"><path d="M23.15 2.587L18.21.21a1.494 1.494 0 0 0-1.705.29l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74L3.899 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448v10.896z"/></svg>
+    </a>
+    <a class="site-link" href="https://notion.so" target="_blank">
+      <svg viewBox="0 0 24 24" fill="white"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.336.653c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg>
+    </a>
+    <a class="site-link" href="https://drive.google.com" target="_blank">
+      <svg viewBox="0 0 24 24" fill="white"><path d="M7.71 3.5L1.15 15l3.43 5.5h13.71L22 15l-6.56-11.5H7.71zM8.73 5.5h6.54L19.21 15h-3.09l-3.43-5.5-4.63 8H4.03L8.73 5.5zm-.42 11.5h6.54l-3.26 5.5h-6.54l3.26-5.5z"/></svg>
+    </a>
+  </div>
 
-          // 昼夜判定
-          bool isDay = cos(lon - sunLon) > 0.0;
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <svg version="1.1" viewBox="0.0 0.0 1133.8582677165355 1133.8582677165355" fill="none" stroke="none" stroke-linecap="square" stroke-miterlimit="10" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg"><clipPath id="p.0"><path d="m0 0l1133.8583 0l0 1133.8583l-1133.8583 0l0 -1133.8583z" clip-rule="nonzero"/></clipPath><g clip-path="url(#p.0)"><path fill="#ffffff" fill-opacity="0.0" d="m0 0l1133.8583 0l0 1133.8583l-1133.8583 0z" fill-rule="evenodd"/><path fill="#ffffff" d="m137.30708 634.6552l0 0c0 -237.27368 192.34834 -429.62204 429.62207 -429.62204l0 0c113.94287 0 223.21887 45.263626 303.78864 125.833405c80.56976 80.56976 125.833435 189.84583 125.833435 303.78864l0 0c0 237.27374 -192.34839 429.622 -429.62207 429.622l0 0c-237.27371 0 -429.62207 -192.34827 -429.62207 -429.622zm71.40318 0l0 0c0 197.8388 160.38007 358.21887 358.21887 358.21887c197.8388 0 358.21887 -160.38007 358.21887 -358.21887l0 0c0 -197.8388 -160.38007 -358.21884 -358.21887 -358.21884l0 0c-197.8388 0 -358.21887 160.38004 -358.21887 358.21884z" fill-rule="evenodd"/><path fill="#ffffff" d="m901.1631 246.48668l46.80316 46.803146l-97.82678 97.82678l-46.80316 -46.80316z" fill-rule="evenodd"/><path fill="#ffffff" d="m369.46457 102.85433l0 0l0 0c0 -8.800179 3.4958496 -17.239922 9.718506 -23.462585c6.222687 -6.222664 14.662415 -9.718521 23.462585 -9.718521l33.338593 0c3.0517578E-4 0 5.493164E-4 2.5177002E-4 5.493164E-4 5.569458E-4l-5.493164E-4 66.36165l0 0c0 3.0517578E-4 -2.4414062E-4 5.493164E-4 -5.493164E-4 5.493164E-4l-33.338043 -5.493164E-4l0 0c-18.325409 0 -33.18109 -14.855682 -33.18109 -33.1811z" fill-rule="evenodd"/><path fill="#ffffff" d="m764.3937 102.76247l0 0l0 0c0 8.800179 -3.4958496 17.239922 -9.718506 23.462585c-6.2226562 6.2226562 -14.662415 9.718521 -23.462585 9.718521l-33.338562 0c-3.0517578E-4 0 -5.493164E-4 -2.4414062E-4 -5.493164E-4 -5.493164E-4l5.493164E-4 -66.36166l0 0c0 -3.0517578E-4 2.4414062E-4 -5.569458E-4 5.493164E-4 -5.569458E-4l33.338013 5.569458E-4l0 0c18.32544 0 33.18109 14.855682 33.18109 33.1811z" fill-rule="evenodd"/><path fill="#ffffff" d="m702.85016 69.6601l0 66.20472l-271.84253 0l0 -66.20472z" fill-rule="evenodd"/><path fill="#ffffff" d="m573.54333 632.707l0 0l0 0c-8.800232 0 -17.23993 -3.4958496 -23.462585 -9.718506c-6.2227173 -6.2226562 -9.718567 -14.662415 -9.718567 -23.462585l0 -33.338562c0 -3.0517578E-4 2.4414062E-4 -5.493164E-4 5.493164E-4 -5.493164E-4l66.361694 5.493164E-4l0 0c3.0517578E-4 0 5.493164E-4 2.4414062E-4 5.493164E-4 5.493164E-4l-5.493164E-4 33.338013l0 0c0 18.32544 -14.855713 33.18109 -33.18109 33.18109z" fill-rule="evenodd"/><path fill="#ffffff" d="m573.4514 348.70172l0 0l0 0c8.800232 0 17.23993 3.4958801 23.462585 9.718536c6.2227173 6.2226562 9.718567 14.662415 9.718567 23.462585l0 33.338562c0 3.0517578E-4 -2.4414062E-4 5.493164E-4 -5.493164E-4 5.493164E-4l-66.361694 -5.493164E-4l0 0c-3.0517578E-4 0 -5.493164E-4 -2.4414062E-4 -5.493164E-4 -5.493164E-4l5.493164E-4 -33.338013l0 0c0 -18.32544 14.855713 -33.18112 33.18109 -33.18112z" fill-rule="evenodd"/><path fill="#ffffff" d="m540.34906 392.95953l66.20477 0l0 195.4961l-66.20477 0z" fill-rule="evenodd"/><path fill="#ffffff" d="m958.7662 235.65749l0 0l0 0c6.1897583 6.1897736 9.667114 14.584915 9.667114 23.338577c0 8.753662 -3.477356 17.148804 -9.667114 23.338593l-23.685059 23.685028c-1.8310547E-4 2.1362305E-4 -5.493164E-4 2.1362305E-4 -7.9345703E-4 0l-46.67639 -46.677155l0 0c-1.8310547E-4 -2.1362305E-4 -1.8310547E-4 -5.79834E-4 0 -7.9345703E-4l23.685059 -23.68425l0 0c12.889526 -12.889542 33.78766 -12.889542 46.677185 0z" fill-rule="evenodd"/></g></svg>
+        </div>
+        <span>Work Hub</span>
+      </div>
+      <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
 
-          float finalColor = 0.0;
-          if(isDay){
-            finalColor = isLand > 0.5 ? 1.0 : 0.0; // 昼: 大陸白・海黒
-          } else {
-            finalColor = isLand > 0.5 ? 0.0 : 1.0; // 夜: 大陸黒・海白
-          }
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">Main</div>
+        <a class="nav-item active" onclick="switchSection('timer')">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <span class="nav-label">Timer</span>
+          <span class="shortcut-hint">1</span>
+        </a>
+        <a class="nav-item" onclick="switchSection('clock')">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <span class="nav-label">Clock</span>
+          <span class="shortcut-hint">2</span>
+        </a>
+        <a class="nav-item" onclick="switchSection('weather')">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+            </svg>
+          </div>
+          <span class="nav-label">Weather</span>
+          <span class="shortcut-hint">3</span>
+        </a>
+        <a class="nav-item" onclick="openNewTab()">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <line x1="12" y1="8" x2="12" y2="16"/>
+              <line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+          </div>
+          <span class="nav-label">New Tab</span>
+        </a>
+      </div>
 
-          gl_FragColor = vec4(vec3(finalColor),1.0);
-        }
-      `
-    });
+      <div class="nav-section">
+        <div class="nav-section-title">Tools</div>
+        <a class="nav-item" onclick="switchSection('stopwatch')">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="13" r="8"/>
+              <path d="M12 9v4l2 2"/>
+            </svg>
+          </div>
+          <span class="nav-label">Stopwatch</span>
+          <span class="shortcut-hint">4</span>
+        </a>
+        <a class="nav-item" onclick="switchSection('custom-timer')">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <span class="nav-label">Custom Timer</span>
+          <span class="shortcut-hint">5</span>
+        </a>
+        <a class="nav-item" onclick="switchSection('calculator')">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="2" width="16" height="20" rx="2"/>
+              <line x1="8" y1="6" x2="16" y2="6"/>
+            </svg>
+          </div>
+          <span class="nav-label">Calculator</span>
+          <span class="shortcut-hint">8</span>
+        </a>
+      </div>
 
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-
-    // アニメーション
-    function animate() {
-      requestAnimationFrame(animate);
-      material.uniforms.uTime.value = Date.now();
-      controls.update();
-      renderer.render(scene, camera);
-    }
-    animate();
-  },
-  undefined,
-  (err) => { console.error("テクスチャ読み込み失敗", err); }
-);
-
-// リサイズ対応
-window.addEventListener("resize", () => {
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-</script>
-
-</body>
-</html>
+      <div class="nav-section">
+        <div class="nav-section-title">Productivity</div>
+        <a class="nav-item" onclick="switchSection('memo')">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </div>
+          <span class="nav-label">Memo</span>
+          <span class="shortcut-hint">6</span>
+        </a>
+        <a class="nav-item" onclick="switchSection('notion')">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 11 12 14 22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+          </div>
+          <span class="nav-label">Notion</span>
+        </a>
+        <a class="nav-item" onclick="switchSection('gemini')">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-44V5
