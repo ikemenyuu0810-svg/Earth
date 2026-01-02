@@ -169,6 +169,7 @@ function showSettings() {
   play('snd-click');
   $('settings').classList.add('show');
 }
+
 function saveSettings() {
   play('snd-click');
   sets.work = parseInt($('set-work').value) || 25;
@@ -177,11 +178,15 @@ function saveSettings() {
   localStorage.setItem('sets', JSON.stringify(sets));
   pomoT = sets.work;
   shortT = sets.break;
-  if (timerType === 'pomodoro') timeLeft = pomoT * 60;
-  else if (timerType === 'short') timeLeft = shortT * 60;
+  if (timerType === 'pomodoro') {
+    timeLeft = initialTime = pomoT * 60;
+  } else if (timerType === 'short') {
+    timeLeft = initialTime = shortT * 60;
+  }
   updateTimer();
   hideSettings();
 }
+
 function hideSettings() {
   play('snd-click');
   $('settings').classList.remove('show');
@@ -231,7 +236,9 @@ function toggleTimer() {
     $('start').textContent = 'Pause';
     updateQuickPlayIcon(true);
     timerInt = setInterval(() => {
-      if (--timeLeft <= 0) {
+      timeLeft--;
+      updateTimer();
+      if (timeLeft <= 0) {
         clearInterval(timerInt);
         timerRun = false;
         $('start').textContent = 'Start';
@@ -255,7 +262,6 @@ function toggleTimer() {
           }
         }
       }
-      updateTimer();
     }, 1000);
   }
 }
@@ -269,7 +275,8 @@ function resetTimer() {
     updateQuickPlayIcon(false);
   }
   cycles = 0;
-  switchTimer(timerType);
+  timeLeft = initialTime;
+  updateTimer();
 }
 
 function updateQuickPlayIcon(playing) {
@@ -285,17 +292,11 @@ function updateQuickPlayIcon(playing) {
 function checkVis() {
   const scrollTop = document.querySelector('.content').scrollTop;
   const shouldShow = scrollTop > 200;
-  const showTimer = shouldShow && currentSection !== 'timer';
+  const showTimer = shouldShow && currentSection !== 'timer' && timerRun;
   const showClock = shouldShow && currentSection !== 'clock';
   
   $('float-timer').classList.toggle('show', showTimer);
   $('float-clock').classList.toggle('show', showClock);
-  
-  if (showTimer && showClock) {
-    $('float-clock').style.right = '200px';
-  } else {
-    $('float-clock').style.right = '24px';
-  }
 }
 
 document.querySelector('.content').addEventListener('scroll', checkVis);
@@ -303,13 +304,17 @@ window.addEventListener('resize', checkVis);
 
 // Custom Timer
 let ctTime = 0, ctInt = null, ctRun = false, ctInitial = 0;
+
 function updateCT() {
   $('ct').textContent = fmtTime3(ctTime);
   if (ctInitial > 0) {
     const progress = (ctTime / ctInitial) * 100;
     $('ct-progress').style.width = progress + '%';
+  } else {
+    $('ct-progress').style.width = '100%';
   }
 }
+
 function toggleCT() {
   play('snd-click');
   if (ctRun) {
@@ -324,19 +329,22 @@ function toggleCT() {
     ctRun = true;
     $('ct-btn').textContent = 'Pause';
     ctInt = setInterval(() => {
-      if (--ctTime <= 0) {
+      ctTime--;
+      updateCT();
+      if (ctTime <= 0) {
         clearInterval(ctInt);
         ctRun = false;
         ctTime = 0;
-        ctInitial = 0;
         $('ct-btn').textContent = 'Start';
+        $('ct-progress').style.width = '0%';
         play('snd-timer');
         showAlert('Time Up！', 'カスタムタイマーが終了しました');
+        ctInitial = 0;
       }
-      updateCT();
     }, 1000);
   }
 }
+
 function resetCT() {
   play('snd-click');
   clearInterval(ctInt);
@@ -680,7 +688,7 @@ function showAppSettings() {
     urlInput.addEventListener('input', (e) => { link.url = e.target.value; });
 
     const label = document.createElement('label');
-    label.style.cssText = 'display:block;padding:8px;background:#e0e0e0;border-radius:4px;cursor:pointer;text-align:center;margin-bottom:8px;';
+    label.style.cssText = 'display:block;padding:8px;background:#e0e0e0;border-radius:100vh;cursor:pointer;text-align:center;margin-bottom:8px;';
     label.textContent = 'Upload Icon';
     
     const fileInput = document.createElement('input');
@@ -692,7 +700,7 @@ function showAppSettings() {
 
     const removeBtn = document.createElement('button');
     removeBtn.textContent = 'Remove';
-    removeBtn.style.cssText = 'padding:8px 16px;background:#e01e5a;color:white;border:none;border-radius:4px;cursor:pointer;width:100%;';
+    removeBtn.style.cssText = 'padding:8px 16px;background:#1264a3;color:white;border:none;border-radius:100vh;cursor:pointer;width:100%;';
     removeBtn.addEventListener('click', () => {
       quickLinks.splice(idx, 1);
       showAppSettings();
@@ -746,6 +754,18 @@ function renderNotionTabs() {
     btn.className = 'notion-tab' + (idx === notionIdx ? ' active' : '');
     btn.textContent = page.name;
     btn.onclick = () => switchNotionPage(idx);
+    
+    if (notionPages.length > 1) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'notion-tab-delete';
+      deleteBtn.innerHTML = '×';
+      deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteNotionPage(idx);
+      };
+      btn.appendChild(deleteBtn);
+    }
+    
     tabs.appendChild(btn);
   });
   if (notionPages.length < 5) {
@@ -762,6 +782,22 @@ function switchNotionPage(idx) {
   notionIdx = idx;
   $('notion').src = notionPages[idx].url;
   renderNotionTabs();
+}
+
+function deleteNotionPage(idx) {
+  if (notionPages.length <= 1) {
+    alert('Cannot delete the last page');
+    return;
+  }
+  if (confirm(`Delete "${notionPages[idx].name}"?`)) {
+    notionPages.splice(idx, 1);
+    if (notionIdx >= notionPages.length) {
+      notionIdx = notionPages.length - 1;
+    }
+    localStorage.setItem('notion-pages', JSON.stringify(notionPages));
+    $('notion').src = notionPages[notionIdx].url;
+    renderNotionTabs();
+  }
 }
 
 function addNotionPage() {
@@ -804,7 +840,24 @@ function onPlayerReady(event) {
 
 function onPlayerStateChange(event) {
   ytPlaying = event.data === YT.PlayerState.PLAYING;
+  updateYoutubePlayIcon();
   updateYoutubeControls();
+}
+
+function updateYoutubePlayIcon() {
+  const playIcon = $('yt-play-icon');
+  const pauseIcon = $('yt-pause-icon');
+  const pauseIcon2 = $('yt-pause-icon2');
+  
+  if (ytPlaying) {
+    playIcon.style.display = 'none';
+    pauseIcon.style.display = 'block';
+    pauseIcon2.style.display = 'block';
+  } else {
+    playIcon.style.display = 'block';
+    pauseIcon.style.display = 'none';
+    pauseIcon2.style.display = 'none';
+  }
 }
 
 function loadYoutubePlaylist() {
@@ -848,6 +901,8 @@ function setYoutubeVolume(vol) {
     $('yt-vol-display').textContent = vol + '%';
     const fixedVol = $('youtube-volume-fixed');
     if (fixedVol) fixedVol.value = vol;
+    const mainVol = $('youtube-volume');
+    if (mainVol) mainVol.value = vol;
   }
 }
 
@@ -855,100 +910,19 @@ function updateYoutubeControls() {
   const fixed = $('youtube-fixed-controls');
   if (currentSection !== 'youtube' && ytPlaying) {
     fixed.classList.add('show');
-  } else {
+  } else if (!ytPlaying) {
+    fixed.classList.remove('show');
+  } else if (currentSection === 'youtube') {
     fixed.classList.remove('show');
   }
 }
 
 window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
-setInterval(updateYoutubeControls, 1000);
+
+setInterval(() => {
+  updateYoutubeControls();
+  checkVis();
+}, 1000);
+
 switchTimer('pomodoro');
-loadSettings();
-
-function switchTimer(type) {
-  timerType = type;
-  isWork = type === 'pomodoro';
-  timeLeft = initialTime = type === 'pomodoro' ? pomoT * 60 : type === 'short' ? shortT * 60 : longT * 60;
-  updateTimer();
-}
-
-function updateTimer() {
-  const min = Math.floor(timeLeft / 60);
-  const sec = timeLeft % 60;
-  $('timer').textContent = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-  $('float-timer-time').textContent = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-  const progress = ((initialTime - timeLeft) / initialTime) * 100;
-  $('timer-progress').style.width = progress + '%';
-}
-
-function toggleTimer() {
-  play('snd-click');
-  if (timerRun) {
-    clearInterval(timerInt);
-    timerRun = false;
-    $('start').textContent = 'Start';
-    updateQuickPlayIcon(false);
-  } else {
-    timerRun = true;
-    $('start').textContent = 'Pause';
-    updateQuickPlayIcon(true);
-    timerInt = setInterval(() => {
-      if (--timeLeft <= 0) {
-        timerRun = false;
-        clearInterval(timerInt);
-        updateQuickPlayIcon(false);
-        if (isWork) {
-          play('snd-timer');
-          showAlert('作業終了！', '休憩時間です');
-          cycles++;
-          if (sets.longBreak > 0 && cycles % sets.longBreak === 0) {
-            setTimeout(() => { switchTimer('long'); toggleTimer(); }, 3000);
-          } else {
-            setTimeout(() => { switchTimer('short'); toggleTimer(); }, 3000);
-          }
-        } else {
-          play('snd-timer');
-          showAlert('休憩終了！', '作業時間です');
-          setTimeout(() => { switchTimer('pomodoro'); toggleTimer(); }, 3000);
-        }
-      }
-      updateTimer();
-    }, 1000);
-  }
-}
-
-function resetTimer() {
-  play('snd-click');
-  if (timerRun) {
-    clearInterval(timerInt);
-    timerRun = false;
-    $('start').textContent = 'Start';
-    updateQuickPlayIcon(false);
-  }
-  timeLeft = initialTime;
-  updateTimer();
-  play('snd-click');
-  if (timerRun) {
-    clearInterval(timerInt);
-    timerRun = false;
-    $('start').textContent = 'Start';
-    updateQuickPlayIcon(false);
-  }
-  timeLeft = initialTime;
-  updateTimer();
-}
-
-function checkVis() {
-  const shouldShow = localStorage.getItem('float-timer') === 'true';
-  if (!shouldShow) return;
-  
-  const content = document.querySelector('.content');
-  const timerRect = $('timer-section').getBoundingClientRect();
-  const contentRect = content.getBoundingClientRect();
-  
-  const isVisible = timerRect.top < contentRect.bottom && timerRect.bottom > contentRect.top;
-  
-  $('float-timer').classList.toggle('visible', !isVisible);
-}
-checkVis();
-setInterval(checkVis, 1000);
+updateTimer();

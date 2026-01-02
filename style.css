@@ -59,12 +59,13 @@ body.long-break { --bg-overlay: rgba(18,100,163,0.15); }
 
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .header { height: var(--header); padding: 0 24px; display: flex; align-items: center; gap: 16px; backdrop-filter: blur(10px); background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); }
-.search-wrap { flex: 1; max-width: 600px; position: relative; margin: 0 auto; }
+.search-wrap { flex: 1; max-width: 800px; position: relative; margin: 0 auto; }
+.sidebar.collapsed ~ .main .search-wrap { margin: 0 auto; }
 .search-box { width: 100%; padding: 10px 40px 10px 36px; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; background: rgba(255,255,255,0.15); color: var(--text); backdrop-filter: blur(10px); transition: all 0.3s; }
 .search-box::placeholder { color: var(--text-dim); }
 .search-box:focus { outline: none; background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.4); box-shadow: 0 0 0 3px rgba(255,255,255,0.1); }
 .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); pointer-events: none; }
-.search-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; cursor: pointer; padding: 6px; color: var(--text); border-radius: 4px; transition: all 0.2s; }
+.search-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; cursor: pointer; padding: 6px; color: var(--text); border-radius: 100vh; transition: all 0.2s; }
 .search-btn:hover { background: rgba(255,255,255,0.3); }
 .header-actions { display: flex; gap: 10px; align-items: center; margin-left: auto; }
 .header-btn { width: 36px; height: 36px; background: rgba(255,255,255,0.15); border: none; border-radius: 6px; color: var(--text); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; position: relative; }
@@ -80,9 +81,10 @@ body.long-break { --bg-overlay: rgba(18,100,163,0.15); }
 
 .timer-hero { background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); border-radius: 12px; padding: 40px; text-align: center; margin-bottom: 24px; border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
 .timer-tabs { display: inline-flex; gap: 6px; margin-bottom: 32px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 10px; }
-.tab-btn { padding: 10px 24px; background: transparent; border: none; color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 7px; transition: all 0.2s; opacity: 0.6; }
+.tab-btn { padding: 10px 24px; background: transparent; border: none; color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 7px; transition: all 0.2s; opacity: 0.6; position: relative; }
 .tab-btn:hover { opacity: 0.8; background: rgba(255,255,255,0.05); }
 .tab-btn.active { background: rgba(255,255,255,0.2); opacity: 1; }
+.tab-btn.active::after { content: ''; position: absolute; inset: -2px; background: rgba(255,255,255,0.3); border-radius: 9px; z-index: -1; }
 .timer-display { font-size: 80px; font-weight: 800; font-variant-numeric: tabular-nums; margin-bottom: 28px; text-shadow: 0 4px 20px rgba(0,0,0,0.4); letter-spacing: 0.02em; }
 .timer-controls { display: flex; gap: 12px; justify-content: center; }
 .ctrl-btn { padding: 16px 40px; background: var(--text); border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 16px rgba(0,0,0,0.2); min-width: 110px; color: rgba(57, 57, 55,0.95 );}
@@ -108,7 +110,7 @@ body.long-break { --bg-overlay: rgba(18,100,163,0.15); }
 .card-content::-webkit-scrollbar { width: 5px; }
 .card-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
 .card.wide { grid-column: span 2; }
-.card.tall { max-height: 1000px; }
+.card.tall { max-height: 1200px; }
 
 .clock-time { font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums; margin-bottom: 8px; text-shadow: 0 2px 12px rgba(0,0,0,0.3); }
 .clock-date { font-size: 16px; opacity: 0.85; margin-bottom: 20px; font-weight: 500; }
@@ -155,9 +157,11 @@ body.long-break { --bg-overlay: rgba(18,100,163,0.15); }
 .notion-iframe { width: 100%; flex: 1; border: none; border-radius: 10px; opacity: 0.85; transition: opacity 0.3s; }
 .notion-iframe:hover { opacity: 1; }
 .notion-tabs { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; flex-shrink: 0; }
-.notion-tab { padding: 8px 16px; background: rgba(255,255,255,0.15); border: none; border-radius: 6px; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+.notion-tab { padding: 8px 16px; background: rgba(255,255,255,0.15); border: none; border-radius: 6px; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s; position: relative; }
 .notion-tab:hover { background: rgba(255,255,255,0.25); }
 .notion-tab.active { background: #1264a3; }
+.notion-tab-delete { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: rgba(255,0,0,0.6); border: none; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; cursor: pointer; display: none; align-items: center; justify-content: center; }
+.notion-tab:hover .notion-tab-delete { display: flex; }
 .notion-add { background: #2bac76; }
 .notion-add:hover { background: #25a06a; }
 
@@ -169,11 +173,11 @@ body.long-break { --bg-overlay: rgba(18,100,163,0.15); }
 .gemini-send { padding: 10px 24px; background: #2bac76; border: none; border-radius: 8px; color: var(--text); font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; height: 44px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 .gemini-send:hover { background: #25a06a; transform: translateY(-2px); }
 
-.calculator { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.calc-display { grid-column: span 4; background: rgba(255,255,255,0.15); border: 1px solid var(--border); border-radius: 10px; padding: 20px; font-size: 32px; font-weight: 700; text-align: right; margin-bottom: 10px; min-height: 60px; word-break: break-all; }
-.calc-history { grid-column: span 4; background: rgba(255,255,255,0.08); border-radius: 8px; padding: 10px; margin-bottom: 10px; max-height: 120px; overflow-y: auto; font-size: 12px; }
+.calculator { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.calc-display { grid-column: span 4; background: rgba(255,255,255,0.15); border: 1px solid var(--border); border-radius: 10px; padding: 24px; font-size: 36px; font-weight: 700; text-align: right; margin-bottom: 12px; min-height: 70px; word-break: break-all; }
+.calc-history { grid-column: span 4; background: rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; margin-bottom: 12px; max-height: 140px; overflow-y: auto; font-size: 12px; }
 .calc-history-item { padding: 4px 8px; margin-bottom: 4px; color: var(--text-dim); }
-.calc-btn { padding: 20px; background: rgba(255,255,255,0.15); border: none; border-radius: 8px; color: var(--text); font-size: 18px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.calc-btn { padding: 24px; background: rgba(255,255,255,0.15); border: none; border-radius: 8px; color: var(--text); font-size: 20px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
 .calc-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.05); }
 .calc-btn.operator { background: rgba(43,172,118,0.3); }
 .calc-btn.operator:hover { background: rgba(43,172,118,0.4); }
@@ -230,12 +234,16 @@ body.long-break { --bg-overlay: rgba(18,100,163,0.15); }
 .float.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .float:hover { transform: translateY(-2px) scale(1.05); }
 .float-timer { right: 24px; }
-.float-clock { right: 180px; transition: right 0.3s, opacity 0.4s, transform 0.4s; }
+.float-clock { right: 24px; transition: right 0.3s, opacity 0.4s, transform 0.4s; }
+.float-timer.show ~ .float-clock { right: 180px; }
 .float-time { font-size: 18px; font-weight: 800; color: #ffffff; font-variant-numeric: tabular-nums; }
 
 .quick-actions { position: fixed; bottom: 24px; right: 24px; display: flex; gap: 10px; z-index: 999; }
 .quick-btn { width: 56px; height: 56px; background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); border: none; border-radius: 50%; box-shadow: 0 6px 20px rgba(0,0,0,0.3); cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; color: #4a154b; }
 .quick-btn:hover { transform: scale(1.1) translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+
+.youtube-fixed-controls { position: fixed; bottom: 90px; right: 24px; background: rgba(57, 57, 55,0.95); backdrop-filter: blur(20px); border-radius: 12px; padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); display: none; z-index: 998; align-items: center; gap: 8px; }
+.youtube-fixed-controls.show { display: flex; }
 
 @media (max-width: 1024px) {
   .sidebar { position: fixed; z-index: 1000; transform: translateX(-100%); }
@@ -252,6 +260,3 @@ body.long-break { --bg-overlay: rgba(18,100,163,0.15); }
 }
 .mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
 .mobile-overlay.show { display: block; }
-
-.youtube-fixed-controls { position: fixed; bottom: 90px; right: 24px; background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); border-radius: 12px; padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); display: none; z-index: 998; }
-.youtube-fixed-controls.show { display: flex; align-items: center; gap: 8px; }
