@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="./icon-ver.black.svg">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="bg-container">
@@ -35,6 +35,10 @@
       <div class="setting-item">
         <label class="setting-label">Break Time (min)</label>
         <input type="number" class="setting-input" id="set-break" min="1" max="30" value="5">
+      </div>
+      <div class="setting-item">
+        <label class="setting-label">Long Break (min)</label>
+        <input type="number" class="setting-input" id="set-long" min="1" max="30" value="15">
       </div>
       <div class="setting-item">
         <label class="setting-label">Repeat (0 = ∞)</label>
@@ -96,13 +100,12 @@
 
   <div class="youtube-fixed-controls" id="youtube-fixed-controls">
     <button class="youtube-btn" onclick="toggleYoutubePlay()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-        <polygon id="yt-play-icon" points="5 3 19 12 5 21 5 3"/>
-        <rect id="yt-pause-icon" x="6" y="4" width="4" height="16" style="display:none;"/>
-        <rect id="yt-pause-icon2" x="14" y="4" width="4" height="16" style="display:none;"/>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="yt-fixed-icon">
+        <polygon points="5 3 19 12 5 21 5 3"/>
       </svg>
     </button>
     <input type="range" class="youtube-volume" id="youtube-volume-fixed" min="0" max="100" value="70" oninput="setYoutubeVolume(this.value)">
+    <span class="yt-vol-text" id="yt-fixed-vol-display">70%</span>
   </div>
 
   <div class="mobile-overlay" id="mobile-overlay" onclick="toggleSidebar()"></div>
@@ -441,6 +444,7 @@
                 </div>
                 <div class="weather-loc" id="w-loc">--</div>
               </div>
+              <button class="weather-reload-btn" onclick="reloadWeatherIframe()">Reload Weather News</button>
               <iframe class="weather-iframe" id="weather-iframe" src="https://weathernews.jp/onebox/35.850943/136.278247/q=%E7%A6%8F%E4%BA%95%E7%9C%8C%E4%BB%8A%E7%AB%8B%E9%83%A1%E6%B1%A0%E7%94%B0%E7%94%BA%E9%AD%9A%E8%A6%8B&v=e584b100c1228484728e08d1f92053b590586760440b3ec15bba5c0a4a49d956&temp=Temp.c&lang=ja"></iframe>
             </div>
           </div>
@@ -683,7 +687,7 @@
                 <div id="yt-player"></div>
                 <div class="youtube-controls">
                   <button class="youtube-btn" onclick="toggleYoutubePlay()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="yt-play-icon">
                       <polygon points="5 3 19 12 5 21 5 3"/>
                     </svg>
                   </button>
@@ -700,7 +704,7 @@
                     </svg>
                   </button>
                   <input type="range" class="youtube-volume" id="youtube-volume" min="0" max="100" value="70" oninput="setYoutubeVolume(this.value)">
-                  <span style="font-size:12px;font-weight:600;min-width:40px;text-align:center;" id="yt-vol-display">70%</span>
+                  <span class="yt-vol-text" id="yt-vol-display">70%</span>
                 </div>
               </div>
             </div>

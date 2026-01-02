@@ -67,12 +67,23 @@ document.addEventListener('keydown', e => {
     }
   }
   
-  if (currentSection === 'calculator' && e.target.tagName !== 'INPUT') {
-    if (/^[0-9]$/.test(e.key)) calcInput(e.key);
-    else if (['+', '-', '*', '/', '%', '.'].includes(e.key)) calcInput(e.key);
-    else if (e.key === 'Enter' || e.key === '=') calcEquals();
-    else if (e.key === 'Escape' || e.key === 'c') clearCalc();
-    else if (e.key === 'Backspace') backspaceCalc();
+  if (currentSection === 'calculator' && e.target.tagName !== 'INPUT' && e.target.contentEditable !== 'true') {
+    if (/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      calcInput(e.key);
+    } else if (['+', '-', '*', '/', '%', '.'].includes(e.key)) {
+      e.preventDefault();
+      calcInput(e.key);
+    } else if (e.key === 'Enter' || e.key === '=') {
+      e.preventDefault();
+      calcEquals();
+    } else if (e.key === 'Escape' || e.key === 'c') {
+      e.preventDefault();
+      clearCalc();
+    } else if (e.key === 'Backspace') {
+      e.preventDefault();
+      backspaceCalc();
+    }
   }
   
   if (focused) {
@@ -160,9 +171,10 @@ function hideStats() {
 }
 
 // Settings
-let sets = JSON.parse(localStorage.getItem('sets') || '{"work":25,"break":5,"repeat":0}');
+let sets = JSON.parse(localStorage.getItem('sets') || '{"work":25,"break":5,"long":15,"repeat":0}');
 $('set-work').value = sets.work;
 $('set-break').value = sets.break;
+if($('set-long')) $('set-long').value = sets.long;
 $('set-repeat').value = sets.repeat;
 
 function showSettings() {
@@ -173,12 +185,15 @@ function saveSettings() {
   play('snd-click');
   sets.work = parseInt($('set-work').value) || 25;
   sets.break = parseInt($('set-break').value) || 5;
+  sets.long = parseInt($('set-long').value) || 15;
   sets.repeat = parseInt($('set-repeat').value) || 0;
   localStorage.setItem('sets', JSON.stringify(sets));
   pomoT = sets.work;
   shortT = sets.break;
+  longT = sets.long;
   if (timerType === 'pomodoro') timeLeft = pomoT * 60;
   else if (timerType === 'short') timeLeft = shortT * 60;
+  else if (timerType === 'long') timeLeft = longT * 60;
   updateTimer();
   hideSettings();
 }
@@ -188,7 +203,7 @@ function hideSettings() {
 }
 
 // Pomodoro
-let pomoT = sets.work, shortT = sets.break, longT = 15;
+let pomoT = sets.work, shortT = sets.break, longT = sets.long || 15;
 let timerType = 'pomodoro', timeLeft = pomoT * 60, timerInt = null, timerRun = false;
 let cycles = 0, isWork = true, initialTime = pomoT * 60;
 
@@ -245,7 +260,7 @@ function toggleTimer() {
           play('snd-pomo');
           showAlert('作業完了！', '休憩時間です');
           if (sets.repeat === 0 || cycles < sets.repeat) {
-            setTimeout(() => { switchTimer('short'); toggleTimer(); }, 3000);
+            setTimeout(() => { switchTimer(cycles % 4 === 0 ? 'long' : 'short'); toggleTimer(); }, 3000);
           }
         } else {
           play('snd-timer');
@@ -292,7 +307,7 @@ function checkVis() {
   $('float-clock').classList.toggle('show', showClock);
   
   if (showTimer && showClock) {
-    $('float-clock').style.right = '200px';
+    $('float-clock').style.right = '220px';
   } else {
     $('float-clock').style.right = '24px';
   }
@@ -384,7 +399,7 @@ function resetSW() {
 
 // Calculator
 let calcStr = '0', calcPrev = 0, calcOp = null, calcNew = true;
-let calcHistory = [];
+let calcHistory = JSON.parse(localStorage.getItem('calc-history') || '[]');
 
 function calcInput(v) {
   play('snd-click');
@@ -415,7 +430,7 @@ function calcEquals() {
   let historyStr = '';
   
   if (calcOp) {
-    historyStr = `${calcPrev} ${calcOp} ${curr} = `;
+    historyStr = `${calcPrev} ${calcOp === '*' ? '×' : calcOp} ${curr} = `;
     if (calcOp === '+') result = calcPrev + curr;
     else if (calcOp === '-') result = calcPrev - curr;
     else if (calcOp === '*') result = calcPrev * curr;
@@ -429,6 +444,8 @@ function calcEquals() {
   if (historyStr) {
     historyStr += result;
     calcHistory.push(historyStr);
+    if (calcHistory.length > 10) calcHistory.shift();
+    localStorage.setItem('calc-history', JSON.stringify(calcHistory));
     updateCalcHistory();
   }
   
@@ -465,6 +482,8 @@ function updateCalcHistory() {
     history.appendChild(div);
   });
 }
+
+updateCalcHistory();
 
 // Memo
 const memo = $('memo');
@@ -530,6 +549,7 @@ function handleMemoFile(e) {
 
 function renderMemoFiles() {
   const container = $('memo-files');
+  if (!container) return;
   container.innerHTML = '';
   Object.entries(memoFiles).forEach(([id, file]) => {
     const div = document.createElement('div');
@@ -603,7 +623,8 @@ function loadWeather() {
   fetch(`https://api.openweathermap.org/data/2.5/weather?lat=35.85272206403399&lon=136.28673448772105&appid=8eb6dc5492a964ea79dd0ef92f1ae01c&units=metric&lang=ja`)
     .then(r => r.json())
     .then(d => {
-      $('w-icon').src = `./weather-svg/${d.weather[0].icon}.svg`;
+      const iconCode = d.weather[0].icon;
+      $('w-icon').src = `./weather-svg/${iconCode}.svg`;
       $('w-icon').style.display = 'block';
       $('w-desc').textContent = d.weather[0].description;
       $('w-temp').textContent = Math.round(d.main.temp) + '°';
@@ -617,6 +638,10 @@ function loadWeather() {
 function reloadWeather() {
   play('snd-click');
   loadWeather();
+}
+
+function reloadWeatherIframe() {
+  play('snd-click');
   const iframe = $('weather-iframe');
   iframe.src = iframe.src;
 }
@@ -748,13 +773,11 @@ function renderNotionTabs() {
     btn.onclick = () => switchNotionPage(idx);
     tabs.appendChild(btn);
   });
-  if (notionPages.length < 5) {
-    const add = document.createElement('button');
-    add.className = 'notion-tab notion-add';
-    add.textContent = '+ Add';
-    add.onclick = addNotionPage;
-    tabs.appendChild(add);
-  }
+  const add = document.createElement('button');
+  add.className = 'notion-tab notion-add';
+  add.textContent = '+ Add';
+  add.onclick = addNotionPage;
+  tabs.appendChild(add);
 }
 
 function switchNotionPage(idx) {
@@ -765,7 +788,6 @@ function switchNotionPage(idx) {
 }
 
 function addNotionPage() {
-  if (notionPages.length >= 5) return alert('Maximum 5 pages');
   const url = prompt('Enter Notion page URL:');
   if (url) {
     const name = prompt('Enter page name:') || 'Page ' + (notionPages.length + 1);
@@ -776,14 +798,14 @@ function addNotionPage() {
 }
 
 renderNotionTabs();
-setInterval(() => { $('notion').src = $('notion').src; }, 300000);
+setInterval(() => { const iframe = $('notion'); if(iframe) iframe.src = iframe.src; }, 300000);
 
 // YouTube
 let ytPlayer = null;
 let ytPlaying = false;
 let ytPlaylistId = '';
 
-function onYouTubeIframeAPIReady() {
+window.onYouTubeIframeAPIReady = function() {
   ytPlayer = new YT.Player('yt-player', {
     height: '390',
     width: '100%',
@@ -805,6 +827,7 @@ function onPlayerReady(event) {
 function onPlayerStateChange(event) {
   ytPlaying = event.data === YT.PlayerState.PLAYING;
   updateYoutubeControls();
+  updateYoutubePlayIcon();
 }
 
 function loadYoutubePlaylist() {
@@ -819,6 +842,7 @@ function loadYoutubePlaylist() {
         list: ytPlaylistId,
         listType: 'playlist'
       });
+      ytPlayer.playVideo();
     }
   } else {
     alert('Invalid playlist URL');
@@ -835,19 +859,37 @@ function toggleYoutubePlay() {
 }
 
 function nextYoutube() {
-  if (ytPlayer) ytPlayer.nextVideo();
+  if (ytPlayer && ytPlayer.nextVideo) ytPlayer.nextVideo();
 }
 
 function prevYoutube() {
-  if (ytPlayer) ytPlayer.previousVideo();
+  if (ytPlayer && ytPlayer.previousVideo) ytPlayer.previousVideo();
 }
 
 function setYoutubeVolume(vol) {
   if (ytPlayer && ytPlayer.setVolume) {
     ytPlayer.setVolume(vol);
-    $('yt-vol-display').textContent = vol + '%';
+    const display = $('yt-vol-display');
+    const fixedDisplay = $('yt-fixed-vol-display');
+    if (display) display.textContent = vol + '%';
+    if (fixedDisplay) fixedDisplay.textContent = vol + '%';
+    const mainVol = $('youtube-volume');
     const fixedVol = $('youtube-volume-fixed');
+    if (mainVol) mainVol.value = vol;
     if (fixedVol) fixedVol.value = vol;
+  }
+}
+
+function updateYoutubePlayIcon() {
+  const mainIcon = $('yt-play-icon');
+  const fixedIcon = $('yt-fixed-icon');
+  
+  if (ytPlaying) {
+    if (mainIcon) mainIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+    if (fixedIcon) fixedIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+  } else {
+    if (mainIcon) mainIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+    if (fixedIcon) fixedIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
   }
 }
 
@@ -860,95 +902,6 @@ function updateYoutubeControls() {
   }
 }
 
-window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 setInterval(updateYoutubeControls, 1000);
 switchTimer('pomodoro');
-loadSettings();
-
-function switchTimer(type) {
-  timerType = type;
-  isWork = type === 'pomodoro';
-  timeLeft = initialTime = type === 'pomodoro' ? pomoT * 60 : type === 'short' ? shortT * 60 : longT * 60;
-  updateTimer();
-}
-
-function updateTimer() {
-  const min = Math.floor(timeLeft / 60);
-  const sec = timeLeft % 60;
-  $('timer').textContent = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-  $('float-timer-time').textContent = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-  const progress = ((initialTime - timeLeft) / initialTime) * 100;
-  $('timer-progress').style.width = progress + '%';
-}
-
-function toggleTimer() {
-  play('snd-click');
-  if (timerRun) {
-    clearInterval(timerInt);
-    timerRun = false;
-    $('start').textContent = 'Start';
-    updateQuickPlayIcon(false);
-  } else {
-    timerRun = true;
-    $('start').textContent = 'Pause';
-    updateQuickPlayIcon(true);
-    timerInt = setInterval(() => {
-      if (--timeLeft <= 0) {
-        timerRun = false;
-        clearInterval(timerInt);
-        updateQuickPlayIcon(false);
-        if (isWork) {
-          play('snd-timer');
-          showAlert('作業終了！', '休憩時間です');
-          cycles++;
-          if (sets.longBreak > 0 && cycles % sets.longBreak === 0) {
-            setTimeout(() => { switchTimer('long'); toggleTimer(); }, 3000);
-          } else {
-            setTimeout(() => { switchTimer('short'); toggleTimer(); }, 3000);
-          }
-        } else {
-          play('snd-timer');
-          showAlert('休憩終了！', '作業時間です');
-          setTimeout(() => { switchTimer('pomodoro'); toggleTimer(); }, 3000);
-        }
-      }
-      updateTimer();
-    }, 1000);
-  }
-}
-
-function resetTimer() {
-  play('snd-click');
-  if (timerRun) {
-    clearInterval(timerInt);
-    timerRun = false;
-    $('start').textContent = 'Start';
-    updateQuickPlayIcon(false);
-  }
-  timeLeft = initialTime;
-  updateTimer();
-  play('snd-click');
-  if (timerRun) {
-    clearInterval(timerInt);
-    timerRun = false;
-    $('start').textContent = 'Start';
-    updateQuickPlayIcon(false);
-  }
-  timeLeft = initialTime;
-  updateTimer();
-}
-
-function checkVis() {
-  const shouldShow = localStorage.getItem('float-timer') === 'true';
-  if (!shouldShow) return;
-  
-  const content = document.querySelector('.content');
-  const timerRect = $('timer-section').getBoundingClientRect();
-  const contentRect = content.getBoundingClientRect();
-  
-  const isVisible = timerRect.top < contentRect.bottom && timerRect.bottom > contentRect.top;
-  
-  $('float-timer').classList.toggle('visible', !isVisible);
-}
-checkVis();
-setInterval(checkVis, 1000);
+updateTimer();
